@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/8.0.171" 
+            xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="GFootBall">
+    <!-- Top: Header Bar -->
+    <top>
+        <HBox spacing="10" alignment="CENTER" style="-fx-background-color: #2c3e50;">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Label text="Ultimate Non-DC" 
+                   style="-fx-text-fill: white; -fx-font-size: 18px;" />
+        </HBox>
+    </top>
+
+    <!-- Center: Main Content with Tabs -->
+    <center>
+        <TabPane tabClosingPolicy="UNAVAILABLE">
+            <tabs>
+                <!-- General Tab -->
+                <Tab text="General">
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="15" right="15" bottom="15" left="15"/>
+                        </padding>
+                        <!-- User Info -->
+                        <Label text="User Coords:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <TextField fx:id="textUserCoords" editable="false" 
+                                   text="(0, 0)" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                        <Label text="User Index:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <TextField fx:id="textUserIndex" editable="false" 
+                                   text="-1" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                        <Label text="Ball Coords:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <TextField fx:id="textBallCoords" editable="false" 
+                                   text="(0, 0)" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                        <!-- Ball and User Options -->
+                        <TextField fx:id="txtBallId" promptText="Ball ID" 
+                                   editable="false" GridPane.columnIndex="0" GridPane.rowIndex="3" 
+                                   GridPane.columnSpan="2"/>
+
+                        <HBox spacing="10" GridPane.columnIndex="0" GridPane.rowIndex="4" GridPane.columnSpan="2">
+                            <CheckBox fx:id="checkDisableDouble" text="Disable double click" />
+                            <CheckBox fx:id="checkClickThrough" text="Click Through" onAction="#handleClickThrough"/>
+                        </HBox>
+
+                        <HBox spacing="10" GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.columnSpan="2">
+                            <CheckBox fx:id="checkGuideTile" text="Show Guide Tile" onAction="#handleGuideTile"/>
+                            <CheckBox fx:id="checkGuideTrap" text="Guide Trap" onAction="#handleGuideTrap"/>
+                            <CheckBox fx:id="checkDiagoKiller" text="Show diagokiller" onAction="#handleDiagoKiller"/>
+                        </HBox>
+
+                        <HBox spacing="10" GridPane.columnIndex="0" GridPane.rowIndex="6" GridPane.columnSpan="2">
+                            <CheckBox fx:id="checkHideBubble" text="Hide Bubble" selected="true"/>
+                            <CheckBox fx:id="checkBall" text="Select Ball"/>
+                        </HBox>
+
+                        <CheckBox fx:id="checkUserName" text="User Name:" 
+                                  GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+                    </GridPane>
+                </Tab>
+
+                <!-- Controls Tab -->
+                <Tab text="Controls">
+                    <VBox spacing="15">
+                        <padding>
+                            <Insets top="15" right="15" bottom="15" left="15"/>
+                        </padding>
+                        <!-- Shoot Control -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Shoot:"/>
+                            <TextField fx:id="txtShoot" promptText="Key" text="F1" prefWidth="50"/>
+                            <RadioButton fx:id="radioButtonShoot" text="Shoot Action"/>
+                        </HBox>
+                        <!-- Trap Control -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Trap:"/>
+                            <TextField fx:id="txtTrap" promptText="Key" text="F2" prefWidth="50"/>
+                            <RadioButton fx:id="radioButtonTrap" text="Trap Action"/>
+                        </HBox>
+                        <!-- Dribble Control -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Dribble:"/>
+                            <TextField fx:id="txtDribble" promptText="Key" text="F3" prefWidth="50"/>
+                            <RadioButton fx:id="radioButtonDribble" text="Dribble Action"/>
+                        </HBox>
+                        <!-- DoubleClick Control -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="DoubleClick:"/>
+                            <TextField fx:id="txtDoubleClick" promptText="Key" text="F4" prefWidth="50"/>
+                            <RadioButton fx:id="radioButtonDoubleClick" text="DoubleClick Action"/>
+                        </HBox>
+                        <!-- Mix Control -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Mix:"/>
+                            <TextField fx:id="txtMix" promptText="Key" text="F5" prefWidth="50"/>
+                            <RadioButton fx:id="radioButtonMix" text="Mix Action"/>
+                        </HBox>
+                        <!-- Follower Keys -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Follower Upper Left:"/>
+                            <TextField fx:id="txtUpperLeft" promptText="Key" text="1" prefWidth="50"/>
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Follower Upper Right:"/>
+                            <TextField fx:id="txtUpperRight" promptText="Key" text="2" prefWidth="50"/>
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Follower Lower Left:"/>
+                            <TextField fx:id="txtLowerLeft" promptText="Key" text="3" prefWidth="50"/>
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Follower Lower Right:"/>
+                            <TextField fx:id="txtLowerRight" promptText="Key" text="4" prefWidth="50"/>
+                        </HBox>
+                    </VBox>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </center>
+
+    <!-- Bottom: Status Bar -->
+    <bottom>
+        <HBox alignment="CENTER" style="-fx-background-color: #ecf0f1;">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Label fx:id="labelShoot" text="Ready" style="-fx-font-size: 14px;"/>
+        </HBox>
+    </bottom>
+</BorderPane>
