@@ -10,9 +10,15 @@ import org.jnativehook.GlobalScreen;
 import org.jnativehook.NativeHookException;
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
+import org.apache.commons.io.IOUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.LogManager;
 
@@ -55,11 +61,16 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
     // Mapping of key fields to actions for hotkeys
     private final Map<TextInputControl, Runnable> hotkeyMapping = new HashMap<>();
 
+    private final Set<Integer> ballTypeIds = new HashSet<>();
+    private final Map<Integer, HPoint> ballLocations = new ConcurrentHashMap<>();
+
     @Override
     protected void onShow() {
         sendToServer(new HPacket("{out:InfoRetrieve}"));
         sendToServer(new HPacket("{out:AvatarExpression}{i:0}"));
         sendToServer(new HPacket("{out:GetHeightMap}"));
+
+        fetchBallTypeIds();
 
         // Suppress verbose logging from native hook libraries
         LogManager.getLogManager().reset();
@@ -179,6 +190,13 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
                             }
                         }
 
+                        HPoint nearest = getNearestBall();
+                        if (nearest != null) {
+                            ballX = nearest.getX();
+                            ballY = nearest.getY();
+                            Platform.runLater(() -> textBallCoords.setText("Ball Coords: (" + ballX + ", " + ballY + ")"));
+                        }
+
                         // Process trap action if flag set
                         if (flagBallTrap) {
                             if (ballX - 1 == currentX && ballY - 1 == currentY) { kickBall(1, 1); }
@@ -212,7 +230,17 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
         intercept(HMessage.Direction.TOCLIENT, "ObjectUpdate", hMessage -> {
             try {
                 int furnitureId = hMessage.getPacket().readInteger();
-                if (furnitureId == Integer.parseInt(txtBallId.getText())) {
+
+                if (ballLocations.containsKey(furnitureId)) {
+                    hMessage.getPacket().readInteger(); // Skip UniqueId
+                    int newX = hMessage.getPacket().readInteger();
+                    int newY = hMessage.getPacket().readInteger();
+                    hMessage.getPacket().readInteger(); // direction
+                    String zTile = hMessage.getPacket().readString();
+                    ballLocations.put(furnitureId, new HPoint(newX, newY));
+                    System.out.println("Updated ball id " + furnitureId + " at (" + newX + "," + newY + ")");
+                }
+                else if (furnitureId == Integer.parseInt(txtBallId.getText())) {
                     hMessage.getPacket().readInteger(); // Skip UniqueId
                     ballX = hMessage.getPacket().readInteger();
                     ballY = hMessage.getPacket().readInteger();
@@ -236,6 +264,10 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
                 hMessage.getPacket().readInteger(); // direction
                 int furnitureId = hMessage.getPacket().readInteger();
                 String zTile = hMessage.getPacket().readString();
+                if (ballLocations.containsKey(furnitureId)) {
+                    ballLocations.put(furnitureId, new HPoint(newX, newY));
+                    System.out.println("Updated ball id " + furnitureId + " at (" + newX + "," + newY + ")");
+                }
                 if (furnitureId == Integer.parseInt(txtBallId.getText())) {
                     ballX = newX;
                     ballY = newY;
@@ -256,6 +288,21 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
                 int ballID = hMessage.getPacket().readInteger();
                 Platform.runLater(() -> txtBallId.setText(String.valueOf(ballID)));
                 checkBall.setSelected(false);
+            }
+        });
+        
+        intercept(HMessage.Direction.TOCLIENT, "Objects", hMessage -> {
+            try {
+                HFloorItem[] floorItems = HFloorItem.parse(hMessage.getPacket());
+                for (HFloorItem item : floorItems) {
+                    if (ballTypeIds.contains(item.getTypeId())) {
+                        HPoint pos = new HPoint(item.getTile().getX(), item.getTile().getY());
+                        ballLocations.put(item.getId(), pos);
+                        System.out.println("Found ball id " + item.getId() + " at " + pos);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
     }
@@ -385,6 +432,20 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
         hotkeyMapping.put(txtLowerRight, this::keyLowerRight);
     }
 
+    // Helper method to get nearest ball based on current user coordinates
+    private HPoint getNearestBall() {
+        HPoint nearest = null;
+        double minDistance = Double.MAX_VALUE;
+        for (HPoint pos : ballLocations.values()) {
+            double distance = Math.sqrt(Math.pow(pos.getX() - currentX, 2) + Math.pow(pos.getY() - currentY, 2));
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearest = pos;
+            }
+        }
+        return nearest;
+    }
+
     // Action methods
 
     private void keyUpperLeft() {
@@ -411,7 +472,15 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
     }
 
     private void keyShoot() {
-        Platform.runLater(()-> radioButtonShoot.setSelected(true));
+        Platform.runLater(() -> radioButtonShoot.setSelected(true));
+        HPoint nearestBall = getNearestBall();
+        if (nearestBall != null) {
+            ballX = nearestBall.getX();
+            ballY = nearestBall.getY();
+        } else {
+            System.out.println("No ball found to shoot.");
+            return;
+        }
         sendToClient(new HPacket("ObjectUpdate", HMessage.Direction.TOCLIENT,
                 1, 8237, ballX, ballY, 0, "0.0", "1.0", 0, 0, 1, 822083583, 2, userName));
         sendToServer(new HPacket(String.format("{out:MoveAvatar}{i:%d}{i:%d}", ballX, ballY)));
@@ -487,6 +556,14 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
 
     private void keyTrap() {
         Platform.runLater(() -> radioButtonTrap.setSelected(true));
+        HPoint nearestBall = getNearestBall();
+        if (nearestBall != null) {
+            ballX = nearestBall.getX();
+            ballY = nearestBall.getY();
+        } else {
+            System.out.println("No ball found to trap.");
+            return;
+        }
         if (ballX == currentX && ballY > currentY) {
             kickBall(0, 1);
         } else if (ballX == currentX && ballY < currentY) {
@@ -578,5 +655,36 @@ public class GFootBall extends ExtensionForm implements NativeKeyListener {
                 sendToClient(new HPacket(String.format("{in:ObjectRemove}{s:\"%d\"}{b:false}{i:123}{i:0}", i)));
             }
         }
+    }
+
+    // Fetch ball type IDs from the furnidata API and store those with classnames fball_ball, fball_ball5, fball_ball6
+    private void fetchBallTypeIds() {
+        new Thread(() -> {
+            try {
+                String url = "https://www.habbo.com/gamedata/furnidata_json/1";
+                URLConnection connection = new URL(url).openConnection();
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+                connection.connect();
+                String jsonText = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
+                JSONObject jsonObj = new JSONObject(jsonText);
+                JSONArray furnitypeArray = jsonObj
+                        .getJSONObject("roomitemtypes")
+                        .getJSONArray("furnitype");
+
+                for (int i = 0; i < furnitypeArray.length(); i++) {
+                    JSONObject item = furnitypeArray.getJSONObject(i);
+                    String classname = item.getString("classname");
+                    if (classname.equals("fball_ball") ||
+                        classname.equals("fball_ball5") ||
+                        classname.equals("fball_ball6")) {
+                        int id = item.getInt("id");
+                        ballTypeIds.add(id);
+                    }
+                }
+                System.out.println("Ball Type IDs fetched: " + ballTypeIds);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 }
